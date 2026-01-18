@@ -16,7 +16,7 @@ export const postJob = async (req, res) => {
             title,
             description,
             requirements: requirements.split(","),
-            salary: Number(salary),
+            salary,
             location,
             jobType,
             experienceLevel: experience,
@@ -65,7 +65,7 @@ export const getJobById = async (req, res) => {
     try {
         const jobId = req.params.id;
         const job = await Job.findById(jobId).populate({
-            path:"applications"
+            path: "applications"
         });
         if (!job) {
             return res.status(404).json({
@@ -83,8 +83,8 @@ export const getAdminJobs = async (req, res) => {
     try {
         const adminId = req.id;
         const jobs = await Job.find({ created_by: adminId }).populate({
-            path:'company',
-            createdAt:-1
+            path: 'company',
+            createdAt: -1
         });
         if (!jobs) {
             return res.status(404).json({
@@ -98,5 +98,88 @@ export const getAdminJobs = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+    }
+}
+// admin delete krega job
+export const deleteJob = async (req, res) => {
+    try {
+        const jobId = req.params.id;
+        const job = await Job.findById(jobId);
+
+        if (!job) {
+            return res.status(404).json({
+                message: "Job not found.",
+                success: false
+            });
+        }
+
+        // Check if the user is the creator of the job
+        if (job.created_by.toString() !== req.id) {
+            return res.status(403).json({
+                message: "You are not authorized to delete this job.",
+                success: false
+            });
+        }
+
+        await job.deleteOne();
+
+        return res.status(200).json({
+            message: "Job deleted successfully.",
+            success: true
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
+    }
+}
+
+// admin update krega job
+export const updateJob = async (req, res) => {
+    try {
+        const jobId = req.params.id;
+        const { title, description, requirements, salary, location, jobType, experience, position } = req.body;
+
+        const job = await Job.findById(jobId);
+        if (!job) {
+            return res.status(404).json({
+                message: "Job not found.",
+                success: false
+            });
+        }
+
+        // Check if the user is the creator of the job
+        if (job.created_by.toString() !== req.id) {
+            return res.status(403).json({
+                message: "You are not authorized to update this job.",
+                success: false
+            });
+        }
+
+        // Update fields if provided
+        if (title) job.title = title;
+        if (description) job.description = description;
+        if (requirements) job.requirements = requirements.split(",");
+        if (salary) job.salary = salary;
+        if (location) job.location = location;
+        if (jobType) job.jobType = jobType;
+        if (experience) job.experienceLevel = experience;
+        if (position) job.position = position;
+
+        await job.save();
+
+        return res.status(200).json({
+            message: "Job updated successfully.",
+            job,
+            success: true
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: "Internal server error.",
+            success: false
+        });
     }
 }
